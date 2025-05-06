@@ -1,4 +1,4 @@
-from .diff_compute_func import ComputeFunc
+from .compute_func import ComputeFunc
 from params import Params
 
 
