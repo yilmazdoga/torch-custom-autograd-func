@@ -17,11 +17,11 @@ def compute_func(a, b, w, x):
 class _ComputeFunc(torch.autograd.Function):
     @staticmethod
     def forward(ctx, a, b, w, x):  
-        # Pyhton implementation:
+        # Pyhton:
         # y = xˆT * wˆT * w * x + a * x + b
         # out = (x.transpose(0, 1) @ w.transpose(0, 1) @ w @ x) + (a @ x) + b
 
-        # C++ implementation:
+        # C++:
         out = _C.compute_func(a, b, w, x)
 
         ctx.x = x
@@ -33,7 +33,7 @@ class _ComputeFunc(torch.autograd.Function):
         x = ctx.x
         a, b, w = ctx.saved_tensors
 
-        # Pyhton implementation:
+        # Pyhton:
         # # dL/da = dL/dy * dy/da = grad_out * x
         # grad_a = grad_out @ x.transpose(0, 1)
         
@@ -43,7 +43,7 @@ class _ComputeFunc(torch.autograd.Function):
         # # dL/dw = dL/dy * dy/dw = grad_out * 2wxxˆT
         # grad_w = 2 * (grad_out * (w @ x)) @ x.transpose(0, 1)
 
-        # C++ implementation:
+        # C++:
         (grad_a, grad_b, grad_w) = _C.compute_func_backward(a, b, w, x, grad_out)
 
         grads = (
