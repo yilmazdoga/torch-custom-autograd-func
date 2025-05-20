@@ -24,16 +24,16 @@ mse_loss = torch.nn.MSELoss()
 params = Params()
 optimizer = params.optimizer
 
-mode = 'gradient_accum'  # 'gradient_accum' or 'loss_accum'
+mode = 'both'  # 'gradient_accum' or 'loss_accum' or 'both'
 
 for epoch in range(num_epochs):
     for i in range(sample_size // batch_size):
         x_sample = x[i * batch_size: (i + 1) * batch_size]
         y_sample = y[i * batch_size: (i + 1) * batch_size]
-        if mode == 'gradient_accum':
-            batch_grads_a = []
-            batch_grads_b = []
-            batch_grads_w = []
+        batch_grads_a = []
+        batch_grads_b = []
+        batch_grads_w = []
+        if mode == 'gradient_accum' or mode == 'both':
             batch_loss = 0.0
             for x_item, y_item in zip(x_sample, y_sample):
                 out_y = compute(x_item, params)
@@ -57,7 +57,10 @@ for epoch in range(num_epochs):
             params.get_w.grad = batch_grads_w
             batch_loss = batch_loss / batch_size
 
-        elif mode == 'loss_accum':
+        if mode == 'loss_accum' or mode == 'both':
+            if mode == 'both':
+                optimizer.zero_grad()
+                
             batch_loss = 0.0
             for x_item, y_item in zip(x_sample, y_sample):
                 out_y = compute(x_item, params)
@@ -65,8 +68,17 @@ for epoch in range(num_epochs):
                 batch_loss += loss
             batch_loss = batch_loss / batch_size
             batch_loss.backward()
-        else:
-            exit(1)
+
+        if mode == 'both':
+            if not torch.allclose(params.get_a.grad, batch_grads_a):
+                print("Gradient mismatch for a")
+                exit(1)
+            if not torch.allclose(params.get_b.grad, batch_grads_b):
+                print("Gradient mismatch for b")
+                exit(1)
+            if not torch.allclose(params.get_w.grad, batch_grads_w):
+                print("Gradient mismatch for w")
+                exit(1)
 
         optimizer.step()
         optimizer.zero_grad()
