@@ -24,7 +24,7 @@ mse_loss = torch.nn.MSELoss()
 params = Params()
 optimizer = params.optimizer
 
-mode = 'gradient_accum'
+mode = 'gradient_accum'  # 'gradient_accum' or 'loss_accum'
 
 for epoch in range(num_epochs):
     for i in range(sample_size // batch_size):
@@ -34,10 +34,13 @@ for epoch in range(num_epochs):
             batch_grads_a = []
             batch_grads_b = []
             batch_grads_w = []
+            batch_loss = 0.0
             for x_item, y_item in zip(x_sample, y_sample):
                 out_y = compute(x_item, params)
-                final_loss = mse_loss(out_y, y_item)
-                final_loss.backward()
+                loss = mse_loss(out_y, y_item)
+                batch_loss += loss
+                loss.backward()
+                
                 batch_grads_a.append(params.get_a.grad)
                 batch_grads_b.append(params.get_b.grad)
                 batch_grads_w.append(params.get_w.grad)
@@ -52,6 +55,7 @@ for epoch in range(num_epochs):
             params.get_a.grad = batch_grads_a
             params.get_b.grad = batch_grads_b
             params.get_w.grad = batch_grads_w
+            batch_loss = batch_loss / batch_size
 
         elif mode == 'loss_accum':
             batch_loss = 0.0
@@ -59,12 +63,12 @@ for epoch in range(num_epochs):
                 out_y = compute(x_item, params)
                 loss = mse_loss(out_y, y_item)
                 batch_loss += loss
-            final_loss = batch_loss / batch_size
-            final_loss.backward()
+            batch_loss = batch_loss / batch_size
+            batch_loss.backward()
         else:
             exit(1)
 
         optimizer.step()
         optimizer.zero_grad()
 
-    print(f"Epoch [{epoch + 1}/{num_epochs}], Loss: {final_loss.item():.4f}")
+    print(f"Epoch [{epoch + 1}/{num_epochs}], Loss: {batch_loss.item():.4f}")
